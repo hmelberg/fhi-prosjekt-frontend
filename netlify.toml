@@ -1,0 +1,34 @@
+# Netlify-konfigurasjon for FHI Prosjekt-utforsker frontend.
+# Ingen build-prosess — vanlig HTML/JS/CSS serveres direkte.
+
+[build]
+  publish = "."
+  command = ""
+
+# Sikkerhets-headers for alle responser
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Tillat fetch til Anvil-API
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.anvil.app; img-src 'self' data: https:; font-src 'self' data:"
+
+# Cache statiske assets aggressivt (hash-versjonert ikke nødvendig her —
+# du redeployer hele siden ved hver oppdatering).
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# HTML-filer skal ikke caches lenge (ny kode må synes umiddelbart)
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"

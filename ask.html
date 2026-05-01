@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spør FHI-prosjektene — RAG</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Spør FHI-prosjektene</h1>
+    <p class="tagline">Still spørsmål — Claude svarer basert på prosjektbeskrivelsene</p>
+  </div>
+  <nav>
+    <a href="index.html">Browse</a>
+    <a href="ask.html" class="active">Spør</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+</header>
+
+<main class="ask-layout">
+  <section class="ask-form">
+    <div id="password-prompt" class="hidden">
+      <h2>Passord kreves</h2>
+      <p>Spørsmål-funksjonen er passord-beskyttet. Skriv inn passordet du fikk:</p>
+      <input type="password" id="ask-password-input" placeholder="Passord">
+      <button id="save-password">Lagre passord i denne nettleseren</button>
+    </div>
+
+    <div id="ask-area">
+      <textarea id="question" rows="4" placeholder="Skriv et spørsmål om FHI-prosjektene…"></textarea>
+
+      <div class="ask-controls">
+        <select id="ask-area-filter">
+          <option value="">Alle områder</option>
+          <option value="HT">Helsetjenester (HT)</option>
+          <option value="FF">Folkehelse og forebygging (FF)</option>
+          <option value="SM">Smittevern (SM)</option>
+          <option value="MH">Miljø og helse (MH)</option>
+          <option value="HD">Helsedata og digitalisering (HD)</option>
+          <option value="KRG">Kreftregisteret (KRG)</option>
+        </select>
+        <button id="ask-button" class="btn-primary">Spør</button>
+        <button id="forget-password" class="btn-link" title="Slett lagret passord">Bytt passord</button>
+      </div>
+
+      <div class="examples">
+        <p class="muted">Eksempler — klikk for å fylle inn:</p>
+        <div id="example-chips" class="chip-row"></div>
+        <button id="more-examples" class="btn-link">Vis flere eksempler</button>
+      </div>
+    </div>
+
+    <div id="answer-area" class="hidden">
+      <div id="answer-loading" class="hidden muted">Tenker…</div>
+      <div id="answer-text" class="answer"></div>
+      <h3 id="sources-heading" class="hidden">Kilder</h3>
+      <div id="sources" class="source-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Data hentet fra <a href="https://www.fhi.no/oversikter/prosjekter/" target="_blank" rel="noopener">fhi.no</a> — dette er ikke en offisiell FHI-tjeneste.</p>
+</footer>
+
+<script src="app.js"></script>
+<script src="ask.js"></script>
+</body>
+</html>

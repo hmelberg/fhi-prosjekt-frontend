@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin — FHI Prosjekt-utforsker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Admin</h1>
+    <p class="tagline">Legg til, rediger eller reklassifiser prosjekter</p>
+  </div>
+  <nav>
+    <a href="index.html">Browse</a>
+    <a href="ask.html">Spør</a>
+    <a href="admin.html" class="active">Admin</a>
+  </nav>
+</header>
+
+<main class="admin-layout">
+  <div id="key-prompt" class="hidden card">
+    <h2>Admin-nøkkel kreves</h2>
+    <p>Lim inn admin-API-nøkkelen (X-Admin-Key, satt i Anvil App Secrets):</p>
+    <input type="password" id="admin-key-input" placeholder="Admin-nøkkel">
+    <button id="save-admin-key">Lagre i denne nettleseren</button>
+  </div>
+
+  <div id="admin-tabs">
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="add-url">Legg til via URL</button>
+      <button class="tab-btn" data-tab="add-manual">Legg til manuelt</button>
+      <button class="tab-btn" data-tab="andre">"Andre"-kø</button>
+      <button class="tab-btn" data-tab="reclassify">Reklassifiser</button>
+    </nav>
+
+    <!-- Tab: Legg til via URL -->
+    <section class="tab-pane active" id="tab-add-url">
+      <h2>Legg til prosjekt fra fhi.no</h2>
+      <p class="muted">Lim inn URL-en til en FHI-prosjektside. Server vil skrape, klassifisere og indeksere.</p>
+      <input type="url" id="url-input" placeholder="https://www.fhi.no/prosjekter/...">
+      <button id="url-submit" class="btn-primary">Skrap og lagre</button>
+      <div id="url-result"></div>
+    </section>
+
+    <!-- Tab: Legg til manuelt -->
+    <section class="tab-pane" id="tab-add-manual">
+      <h2>Legg til manuelt prosjekt</h2>
+      <p class="muted">For prosjekter som ikke ligger på fhi.no.</p>
+      <form id="manual-form">
+        <label>Tittel <input type="text" name="title" required></label>
+        <label>Kort beskrivelse <textarea name="description" rows="2"></textarea></label>
+        <label>Sammendrag <textarea name="sammendrag" rows="4"></textarea></label>
+        <label>Bakgrunn <textarea name="bakgrunn" rows="4"></textarea></label>
+        <label>Hensikt <textarea name="hensikt" rows="3"></textarea></label>
+        <label>Gjennomføring <textarea name="gjennomforing" rows="3"></textarea></label>
+        <div class="row">
+          <label>Prosjektstart <input type="date" name="project_start"></label>
+          <label>Prosjektslutt <input type="date" name="project_end"></label>
+        </div>
+        <label>Status
+          <select name="status">
+            <option value="active">Aktivt</option>
+            <option value="concluded">Avsluttet</option>
+            <option value="notstarted">Ikke påbegynt</option>
+          </select>
+        </label>
+        <label>Ansvarlig (prosjektleder) <input type="text" name="responsible"></label>
+        <label>Samarbeidspartnere (én per linje) <textarea name="partners" rows="3"></textarea></label>
+        <label>Finansiering <input type="text" name="funding"></label>
+        <label>Ekstern URL (valgfri) <input type="url" name="url"></label>
+        <button type="submit" class="btn-primary">Lagre</button>
+      </form>
+      <div id="manual-result"></div>
+    </section>
+
+    <!-- Tab: ANDRE-kø -->
+    <section class="tab-pane" id="tab-andre">
+      <h2>Prosjekter klassifisert som "Andre"</h2>
+      <p class="muted">Disse fikk ikke treff i regelverket. Velg riktig område manuelt.</p>
+      <button id="load-andre">Last inn ANDRE-prosjekter</button>
+      <div id="andre-list"></div>
+    </section>
+
+    <!-- Tab: Reklassifiser -->
+    <section class="tab-pane" id="tab-reclassify">
+      <h2>Reklassifiser alle prosjekter</h2>
+      <p class="muted">
+        Kjør klassifiseringsregler på nytt etter at du har endret <code>classify_rules.yaml</code>
+        eller <code>vocab.yaml</code> i Anvil-appen. Manuelt overstyrte prosjekter beholdes med mindre
+        du krysser av "tving".
+      </p>
+      <label><input type="checkbox" id="force-reclassify"> Tving (overstyr manuelle endringer)</label>
+      <button id="reclassify-btn" class="btn-primary">Kjør reklassifisering</button>
+      <div id="reclassify-result"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <p>Data hentet fra <a href="https://www.fhi.no/oversikter/prosjekter/" target="_blank" rel="noopener">fhi.no</a></p>
+</footer>
+
+<script src="app.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

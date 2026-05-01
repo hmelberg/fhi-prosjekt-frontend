@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FHI Prosjekt-utforsker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>FHI Prosjekt-utforsker</h1>
+    <p class="tagline">Søk og utforsk forskningsprosjekter ved Folkehelseinstituttet</p>
+  </div>
+  <nav>
+    <a href="index.html" class="active">Browse</a>
+    <a href="ask.html">Spør</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+</header>
+
+<main class="layout">
+  <aside class="filters" id="filters">
+    <div class="filter-block">
+      <label class="filter-label">Hovedgruppe</label>
+      <div id="main-group-filter" class="radio-group">
+        <label><input type="radio" name="main_group" value="" checked> Alle</label>
+      </div>
+    </div>
+
+    <div class="filter-block">
+      <label class="filter-label">Område</label>
+      <div id="area-filter" class="check-group"></div>
+    </div>
+
+    <div class="filter-block">
+      <label class="filter-label">Stikkord</label>
+      <input type="text" id="tag-search" placeholder="Søk i stikkord…">
+      <div id="tag-filter" class="check-group scrollable"></div>
+    </div>
+
+    <div class="filter-block">
+      <label class="filter-label">Status</label>
+      <div id="status-filter" class="radio-group">
+        <label><input type="radio" name="status" value="" checked> Alle</label>
+        <label><input type="radio" name="status" value="active"> Aktive</label>
+        <label><input type="radio" name="status" value="concluded"> Avsluttede</label>
+        <label><input type="radio" name="status" value="notstarted"> Ikke påbegynt</label>
+      </div>
+    </div>
+
+    <button id="reset-filters" class="btn-link">Nullstill filtre</button>
+  </aside>
+
+  <section class="results">
+    <div class="results-bar">
+      <input type="search" id="text-search" placeholder="Fritekst-søk i tittel og beskrivelse…">
+      <select id="sort">
+        <option value="date_changed">Sist endret</option>
+        <option value="title">Tittel A-Å</option>
+        <option value="project_start">Prosjektstart</option>
+      </select>
+      <span id="result-count" class="muted"></span>
+    </div>
+    <div id="cards" class="card-grid"></div>
+    <div id="pagination" class="pagination"></div>
+  </section>
+</main>
+
+<dialog id="detail-dialog">
+  <div class="dialog-inner" id="detail-content"></div>
+  <button class="dialog-close" onclick="document.getElementById('detail-dialog').close()">Lukk</button>
+</dialog>
+
+<footer>
+  <p>Data hentet fra <a href="https://www.fhi.no/oversikter/prosjekter/" target="_blank" rel="noopener">fhi.no</a> — dette er ikke en offisiell FHI-tjeneste.</p>
+</footer>
+
+<script src="app.js"></script>
+<script src="browse.js"></script>
+</body>
+</html>
