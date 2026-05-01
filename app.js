@@ -22,9 +22,11 @@ const API = getApiBase();
 // === Generell API-wrapper =====================================================
 
 async function api(path, opts = {}) {
+  // Viktig: ...opts MÅ komme før headers, ellers overskriver opts.headers
+  // det merget objektet og Content-Type forsvinner.
   const r = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
     ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
   if (!r.ok) {
     let detail = '';
