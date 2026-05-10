@@ -109,10 +109,10 @@ To `<dialog>`-elementer:
 | Klikk på tittel-celle | Åpner `detail-dialog` via eksisterende `openDetail(slug)` |
 | Klikk på avkortet celle (ikke tittel) | Åpner `cell-dialog` med kolonnenavn som tittel og full verdi |
 | Klikk på celle som passer (ikke avkortet) | Ingenting (cursor: default) |
-| Klikk på stikkord-chip i celle | Toggle filter for det stikkordet |
-| Klikk på områdebadge i celle | Sett område-filter til verdien |
-| Klikk på kildebadge i celle | Toggle kilden i kildefilteret |
+| Klikk på stikkord-chip, områdebadge, kildebadge i celle | Samme som klikk på cellen — åpner `cell-dialog`. Chips/badges er visuelle, ikke interaktive filter-snarveier i v1 |
 | Esc / klikk utenfor | Lukker dialog |
+
+Filter-snarveier fra celleinnhold (klikk-stikkord → toggle filter, klikk-områdebadge → sett område-filter) er bevisst utenfor scope for v1. De krever inngrep i dagens filter-state og hører hjemme i feature #2.
 
 `cell-dialog`-innhold:
 - Header: kolonnens label ("Stikkord", "Antall månedsverk i 2025", "Sammendrag", ...)
@@ -267,5 +267,6 @@ Rollback: feil i tabell-rendring fanges med try/catch og faller tilbake til card
 - URL-state (`?view=table`)
 - Caching av "alle filtrerte"-respons
 - Automatiserte tester
+- Filter-snarveier fra celleinnhold (chip-/badge-klikk endrer filter) — kommer i feature #2
 - Eksport (kommer i feature #3)
 - Analyse/charts (kommer i feature #4)
