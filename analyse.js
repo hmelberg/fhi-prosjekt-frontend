@@ -35,8 +35,9 @@ const DIMS = {
   main_group:      { id: 'main_group',      label: 'Hovedgruppe',    get: r => r.main_group || '' },
   source_category: { id: 'source_category', label: 'Kilde',          get: r => mapSourceCategory(r) },
   status:          { id: 'status',          label: 'Status',         get: r => r.status || '' },
-  year_changed:    { id: 'year_changed',    label: 'År endret',      get: r => (r.date_changed || '').slice(0, 4) },
-  year_started:    { id: 'year_started',    label: 'År startet',     get: r => (r.project_start || '').slice(0, 4) },
+  year_changed:    { id: 'year_changed',    label: 'År endret',      get: r => (r.date_changed || '').slice(0, 4), skipEmpty: true },
+  year_started:    { id: 'year_started',    label: 'År startet',     get: r => (r.project_start || '').slice(0, 4), skipEmpty: true },
+  year_ended:      { id: 'year_ended',      label: 'År avsluttet',   get: r => (r.project_end || '').slice(0, 4), skipEmpty: true },
   tag:             { id: 'tag',             label: 'Stikkord',       get: r => r.tags || [], multiValue: true, topN: 20 },
 };
 
@@ -340,10 +341,16 @@ function aggregate(rows, state) {
 
   for (const r of rows) {
     const d1Vals = toArray(dim.get(r));
+    // skipEmpty: for år-dimensjoner og lignende — utelat rader uten verdi
+    // helt fra aggregeringen i stedet for å samle dem i '(tom)'-bucket
+    if (dim.skipEmpty && d1Vals.every(v => v == null || v === '')) continue;
     const d2Vals = dim2 ? toArray(dim2.get(r)) : ['__total__'];
+    if (dim2 && dim2.skipEmpty && d2Vals.every(v => v == null || v === '')) continue;
 
     for (const v1 of d1Vals) {
+      if (dim.skipEmpty && (v1 == null || v1 === '')) continue;
       for (const v2 of d2Vals) {
+        if (dim2 && dim2.skipEmpty && (v2 == null || v2 === '')) continue;
         const k1 = (v1 == null || v1 === '') ? '(tom)' : String(v1);
         const k2 = (v2 == null || v2 === '') ? '(tom)' : String(v2);
         if (!buckets.has(k1)) buckets.set(k1, new Map());
