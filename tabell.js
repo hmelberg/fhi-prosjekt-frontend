@@ -112,7 +112,7 @@ function applyViewMode() {
 
 // === Kolonnedefinisjoner ===
 const COLUMNS = [
-  { id: 'title', label: 'Tittel', group: 'standard', width: 280,
+  { id: 'title', label: 'Tittel', group: 'standard', width: 420,
     get: r => r.title || '',
     format: (v, r) => el('span', { class: 'cell-title-link', 'data-slug': r.slug }, v || '(uten tittel)'),
     sortKey: r => (r.title || '').toLowerCase() },
@@ -163,7 +163,7 @@ const COLUMNS = [
     sortKey: r => (r.date_changed || '').slice(0, 4) },
 ];
 
-const DEFAULT_COLUMNS = ['title', 'area', 'status', 'source', 'tags', 'period', 'responsible'];
+const DEFAULT_COLUMNS = ['title', 'area', 'source', 'tags', 'period', 'responsible'];
 
 function getActiveColumns() {
   const enabled = TABLE_STATE.enabledCols || DEFAULT_COLUMNS;

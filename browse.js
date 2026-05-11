@@ -1,7 +1,7 @@
 // Browse-side: filterbar liste over prosjekter med paginering, sortering og søk.
 
 const STATE = {
-  filters: { area: '', main_group: '', tags: new Set(), status: '', q: '' },
+  filters: { area: '', main_group: '', tags: new Set(), sources: new Set(), status: '', q: '' },
   sort: 'date_changed',
   page: 0,
   pageSize: 25,
@@ -33,13 +33,13 @@ function setupEventListeners() {
   });
 
   $('reset-filters').addEventListener('click', () => {
-    STATE.filters = { area: '', main_group: '', tags: new Set(), status: '', q: '' };
+    STATE.filters = { area: '', main_group: '', tags: new Set(), sources: new Set(), status: '', q: '' };
     STATE.sort = 'date_changed';
     STATE.page = 0;
     $('text-search').value = '';
     $('sort').value = 'date_changed';
     document.querySelectorAll('input[type=radio][value=""]').forEach(r => r.checked = true);
-    document.querySelectorAll('#area-filter input, #tag-filter input').forEach(c => c.checked = false);
+    document.querySelectorAll('#area-filter input, #source-filter input, #tag-filter input').forEach(c => c.checked = false);
     loadProjects();
   });
 
@@ -65,7 +65,28 @@ async function loadFacets() {
   }
   renderMainGroupFilter(STATE.facets.main_groups);
   renderAreaFilter(STATE.facets.areas);
+  renderSourceFilter(STATE.facets.source_categories || []);
   renderTagFilter(STATE.facets.tags);
+}
+
+function renderSourceFilter(cats) {
+  const root = $('source-filter');
+  if (!root) return;
+  root.innerHTML = '';
+  for (const s of cats) {
+    const lbl = el('label', {},
+      el('input', { type: 'checkbox', value: s.code }),
+      ` ${s.name}`,
+      el('span', { class: 'filter-count' }, ` (${s.count})`),
+    );
+    lbl.querySelector('input').addEventListener('change', e => {
+      if (e.target.checked) STATE.filters.sources.add(e.target.value);
+      else STATE.filters.sources.delete(e.target.value);
+      STATE.page = 0;
+      loadProjects();
+    });
+    root.appendChild(lbl);
+  }
 }
 
 function renderMainGroupFilter(groups) {
@@ -131,6 +152,7 @@ async function loadProjects() {
   if (STATE.filters.area) params.set('area', STATE.filters.area);
   if (STATE.filters.main_group) params.set('main_group', STATE.filters.main_group);
   if (STATE.filters.tags.size) params.set('tags', [...STATE.filters.tags].join(','));
+  if (STATE.filters.sources.size) params.set('sources', [...STATE.filters.sources].join(','));
   if (STATE.filters.status) params.set('status', STATE.filters.status);
   if (STATE.filters.q) params.set('q', STATE.filters.q);
   params.set('sort', STATE.sort);
