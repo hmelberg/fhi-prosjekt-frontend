@@ -183,12 +183,19 @@ function renderTable() {
   try {
     _renderTableInner();
   } catch (e) {
-    console.error('Feil i tabell-rendring, faller tilbake til kort:', e);
+    console.error('Feil i tabell-rendring:', e);
     const root = document.getElementById('table-view');
     root.innerHTML = '';
-    root.appendChild(el('p', { class: 'muted', style: 'padding:1rem;color:#991b1b' },
-      'Tabell-rendringen feilet. Bytter til kort-visning. Detaljer i konsollen.'));
-    setViewMode('cards', { persist: false });
+    const banner = el('div', {
+      style: 'padding:1rem;margin:1rem 0;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b',
+    });
+    banner.appendChild(el('strong', {}, 'Tabell-feil: '));
+    banner.appendChild(document.createTextNode(String(e && e.message || e)));
+    banner.appendChild(el('pre', {
+      style: 'margin-top:0.5rem;font-size:0.75rem;white-space:pre-wrap;color:#7f1d1d',
+    }, e && e.stack ? e.stack : '(ingen stack)'));
+    root.appendChild(banner);
+    // Bytter IKKE tilbake til kort — vi vil at brukeren skal se feilen og rapportere.
   }
 }
 
