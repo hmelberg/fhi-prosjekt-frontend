@@ -13,6 +13,7 @@ const TABLE_STATE = {
   enabledCols: null,                     // array av kolonne-id-er; null = bruk default
   sort: { col: 'date_changed', dir: 'desc' },
 };
+window.TABLE_STATE = TABLE_STATE;
 
 // === Init ===
 document.addEventListener('DOMContentLoaded', initTabell);
@@ -81,10 +82,16 @@ function wireViewToggle() {
 }
 
 function setViewMode(mode, { persist = true } = {}) {
+  const prevMode = TABLE_STATE.viewMode;
   TABLE_STATE.viewMode = mode;
   if (persist) saveViewMode(mode);
   applyViewMode();
-  if (mode === 'table' && TABLE_STATE.rows.length) renderTable();
+  // Bytte mellom modi krever ofte ny mengde data (paginering vs alle):
+  if (prevMode !== mode && typeof loadProjects === 'function') {
+    loadProjects();
+  } else if (mode === 'table' && TABLE_STATE.rows.length) {
+    renderTable();
+  }
 }
 
 function applyViewMode() {
