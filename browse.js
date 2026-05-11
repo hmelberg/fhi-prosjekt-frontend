@@ -145,8 +145,13 @@ async function loadProjects() {
     renderCards(data.items);
     renderPagination();
     $('result-count').textContent = `${data.total} prosjekter`;
+    // Tabell-visningen lytter på dette eventet — den bruker samme datasett
+    window.dispatchEvent(new CustomEvent('projects-loaded', {
+      detail: { items: data.items, total: data.total, params: params.toString() },
+    }));
   } catch (e) {
     cards.innerHTML = `<p class="muted">Feil: ${escapeHtml(e.message)}</p>`;
+    window.dispatchEvent(new CustomEvent('projects-error', { detail: { error: e } }));
   }
 
   // Status-radio
