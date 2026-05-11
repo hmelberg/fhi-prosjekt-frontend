@@ -1,5 +1,8 @@
 /* FHI Prosjekt-utforsker – enkel, ren stil. */
 
+/* HTML hidden-attributt må slå CSS display-regler (f.eks. .card-grid { display: grid }) */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #f6f7f9;
   --panel: #ffffff;
