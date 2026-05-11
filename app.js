@@ -86,6 +86,33 @@ function areaBadge(area) {
   return el('span', { class: `area-badge area-${area || 'ANDRE'}`, title: AREA_NAMES[area] }, area || 'ANDRE');
 }
 
+const SOURCE_NAMES = {
+  NVA: 'NVA / Cristin',
+  eProtokoll: 'eProtokoll',
+  TILDELINGSBREV: 'Tildelingsbrev',
+  VIRKSOMHETSPLAN: 'Virksomhetsplan',
+  FF: 'Folkehelse og forebygging',
+  SM: 'Smittevern',
+  KRG: 'Kreftregisteret',
+  HT: 'Helsetjenester',
+  HD: 'Helsedata og digitalisering',
+  MH: 'Miljø og helse',
+  RAPPORT: 'Rapport',
+};
+
+function sourceBadge(source) {
+  if (!source) return el('span', { class: 'source-badge', title: 'Ukjent kilde' }, '—');
+  const title = SOURCE_NAMES[source] || source;
+  return el('span', { class: `source-badge source-${source}`, title }, source);
+}
+
+function sourcesCell(sources) {
+  // Returnerer et fragment med en badge per kilde
+  const frag = document.createDocumentFragment();
+  for (const s of sources) frag.appendChild(sourceBadge(s));
+  return frag;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
