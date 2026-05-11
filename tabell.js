@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', initTabell);
 function initTabell() {
   loadStateFromStorage();
   wireViewToggle();
-  // Tvunget cards på mobil
+  wireColumnPicker();
   if (window.innerWidth < MOBILE_BREAKPOINT && TABLE_STATE.viewMode === 'table') {
     TABLE_STATE.viewMode = 'cards';
   }
@@ -370,6 +370,108 @@ function formatTagsCell(tags) {
 function stripHtml(s) {
   if (!s) return '';
   return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// === Kolonneplukker ===
+function wireColumnPicker() {
+  const btn = document.getElementById('column-picker-btn');
+  const panel = document.getElementById('column-picker-panel');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = !panel.hidden;
+    if (isOpen) {
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      renderColumnPicker();
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && e.target !== btn) {
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+function renderColumnPicker() {
+  const panel = document.getElementById('column-picker-panel');
+  panel.innerHTML = '';
+  const active = new Set(TABLE_STATE.enabledCols || DEFAULT_COLUMNS);
+
+  // Grupper kolonner
+  const groups = {};
+  for (const col of COLUMNS) {
+    (groups[col.group] = groups[col.group] || []).push(col);
+  }
+  const groupOrder = ['standard', 'eProtokoll', 'NVA', 'fhi.no', 'avledede'];
+  const groupLabel = {
+    standard: 'Standard',
+    eProtokoll: 'eProtokoll',
+    NVA: 'NVA / Cristin',
+    'fhi.no': 'fhi.no',
+    avledede: 'Avledede',
+  };
+
+  for (const groupId of groupOrder) {
+    const cols = groups[groupId] || [];
+    if (!cols.length) continue;
+    panel.appendChild(el('h4', { class: 'picker-group' }, groupLabel[groupId] || groupId));
+    for (const col of cols) {
+      const id = `pick-${col.id}`;
+      const label = el('label', { class: 'picker-row' },
+        el('input', {
+          type: 'checkbox',
+          id,
+          checked: active.has(col.id) ? '' : false,
+        }),
+        ' ',
+        col.label,
+      );
+      label.querySelector('input').addEventListener('change', (e) => {
+        toggleColumn(col.id, e.target.checked);
+      });
+      panel.appendChild(label);
+    }
+  }
+
+  const reset = el('button', {
+    type: 'button',
+    class: 'picker-reset',
+    onclick: resetColumns,
+  }, 'Nullstill til standard');
+  panel.appendChild(reset);
+}
+
+function toggleColumn(colId, on) {
+  const current = TABLE_STATE.enabledCols || DEFAULT_COLUMNS.slice();
+  let next;
+  if (on) {
+    if (!current.includes(colId)) {
+      // Plasser i samme rekkefølge som COLUMNS-array
+      const order = COLUMNS.map(c => c.id);
+      next = current.concat(colId).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    } else {
+      next = current.slice();
+    }
+  } else {
+    next = current.filter(id => id !== colId);
+  }
+  TABLE_STATE.enabledCols = next;
+  saveEnabledCols(next);
+  renderTable();
+}
+
+function resetColumns() {
+  TABLE_STATE.enabledCols = null;
+  localStorage.removeItem(LS_TABLE_COLUMNS);
+  renderColumnPicker();
+  renderTable();
 }
 
 // === Helpers ===
