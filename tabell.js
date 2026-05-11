@@ -40,6 +40,8 @@ function onResize() {
   document.getElementById('view-toggle').style.display = isMobile ? 'none' : '';
   if (isMobile && TABLE_STATE.viewMode === 'table') {
     setViewMode('cards', { persist: false });
+  } else if (TABLE_STATE.viewMode === 'table') {
+    markTruncated();
   }
 }
 
@@ -189,6 +191,9 @@ function renderTable() {
   for (const row of sortedRows) tbody.appendChild(renderRow(row, cols));
   table.appendChild(tbody);
   root.appendChild(table);
+  wireTableClicks(table);
+  // requestAnimationFrame for å sikre at layout har kjørt før vi måler
+  requestAnimationFrame(markTruncated);
 }
 
 function renderHeader(cols) {
@@ -225,6 +230,91 @@ function renderRow(row, cols) {
     tr.appendChild(td);
   }
   return tr;
+}
+
+// === Klikk-håndtering ===
+function wireTableClicks(table) {
+  table.addEventListener('click', (e) => {
+    // Titlel-klikk → detail-dialog
+    const titleSpan = e.target.closest('.cell-title-link');
+    if (titleSpan) {
+      const slug = titleSpan.dataset.slug;
+      if (slug && typeof window.openDetail === 'function') {
+        window.openDetail(slug);
+      }
+      return;
+    }
+    // Celle-klikk (kun avkortede celler er klikkbare)
+    const td = e.target.closest('td.truncated');
+    if (td) {
+      const colId = td.dataset.colId;
+      const tr = td.closest('tr');
+      const slug = tr && tr.dataset.slug;
+      const row = TABLE_STATE.rows.find(r => r.slug === slug);
+      const col = COLUMNS.find(c => c.id === colId);
+      if (row && col) openCellDialog(col, row);
+    }
+  });
+}
+
+function markTruncated() {
+  const tds = document.querySelectorAll('.data-table tbody td');
+  for (const td of tds) {
+    const isTrunc = td.scrollWidth > td.clientWidth + 1;
+    td.classList.toggle('truncated', isTrunc);
+  }
+}
+
+function openCellDialog(col, row) {
+  const dlg = document.getElementById('cell-dialog');
+  const root = document.getElementById('cell-content');
+  root.innerHTML = '';
+  root.appendChild(el('h3', {}, col.label));
+
+  const val = col.get(row);
+  root.appendChild(renderCellValue(val, col, row));
+
+  // Lenke til full prosjekt-detalj
+  if (row.slug) {
+    root.appendChild(el('p', { style: 'margin-top:1rem;border-top:1px solid #eee;padding-top:0.5rem' },
+      el('a', {
+        href: '#',
+        onclick: (ev) => {
+          ev.preventDefault();
+          dlg.close();
+          if (typeof window.openDetail === 'function') window.openDetail(row.slug);
+        },
+      }, '↗ Gå til prosjekt-detalj'),
+    ));
+  }
+  dlg.showModal();
+}
+
+function renderCellValue(val, col, row) {
+  // Lenke-felt
+  if (col.id === 'url' || (typeof val === 'string' && /^https?:\/\//.test(val))) {
+    return el('p', {}, el('a', { href: val, target: '_blank', rel: 'noopener' }, val));
+  }
+  // Liste (stikkord, partnere, sources)
+  if (Array.isArray(val)) {
+    if (!val.length) return el('p', { class: 'muted' }, '(tom)');
+    const ul = el('ul', {});
+    for (const item of val) ul.appendChild(el('li', {}, String(item)));
+    return ul;
+  }
+  // Tall
+  if (typeof val === 'number') return el('p', {}, String(val));
+  // Strenger: prøv JSON-parse (Cristin extra_fields-verdier er ofte JSON-strenger)
+  if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+    try {
+      const parsed = JSON.parse(val);
+      return el('pre', {}, JSON.stringify(parsed, null, 2));
+    } catch {
+      // fall through til ren tekst
+    }
+  }
+  // Default: ren tekst med wrap
+  return el('p', { style: 'white-space:pre-wrap;word-break:break-word' }, String(val ?? ''));
 }
 
 // === Sortering ===

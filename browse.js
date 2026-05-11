@@ -259,3 +259,5 @@ async function openDetail(slug) {
     root.innerHTML = `<p class="muted">Feil: ${escapeHtml(e.message)}</p>`;
   }
 }
+
+window.openDetail = openDetail;
