@@ -55,14 +55,25 @@
   <section class="results">
     <div class="results-bar">
       <input type="search" id="text-search" placeholder="Fritekst-søk i tittel og beskrivelse…">
-      <select id="sort">
+      <select id="sort" aria-label="Sortering for kort-visning">
         <option value="date_changed">Sist endret</option>
         <option value="title">Tittel A-Å</option>
         <option value="project_start">Prosjektstart</option>
       </select>
+      <div class="view-toggle" id="view-toggle" role="group" aria-label="Visningsmodus">
+        <button type="button" data-mode="cards" class="active">Kort</button>
+        <button type="button" data-mode="table">Tabell</button>
+      </div>
+      <div class="column-picker-wrap" id="column-picker-wrap" hidden>
+        <button type="button" id="column-picker-btn" aria-haspopup="true" aria-expanded="false">
+          Kolonner ▾
+        </button>
+        <div class="column-picker-panel" id="column-picker-panel" hidden></div>
+      </div>
       <span id="result-count" class="muted"></span>
     </div>
     <div id="cards" class="card-grid"></div>
+    <div id="table-view" class="table-view" hidden></div>
     <div id="pagination" class="pagination"></div>
   </section>
 </main>
@@ -72,11 +83,17 @@
   <button class="dialog-close" onclick="document.getElementById('detail-dialog').close()">Lukk</button>
 </dialog>
 
+<dialog id="cell-dialog">
+  <div class="dialog-inner" id="cell-content"></div>
+  <button class="dialog-close" onclick="document.getElementById('cell-dialog').close()">Lukk</button>
+</dialog>
+
 <footer>
   <p>Data hentet fra <a href="https://www.fhi.no/oversikter/prosjekter/" target="_blank" rel="noopener">fhi.no</a> — dette er ikke en offisiell FHI-tjeneste.</p>
 </footer>
 
 <script src="app.js"></script>
 <script src="browse.js"></script>
+<script src="tabell.js"></script>
 </body>
 </html>
