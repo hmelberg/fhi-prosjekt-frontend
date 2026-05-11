@@ -390,3 +390,38 @@ footer {
 .source-HD             { background: #cffafe; color: #155e75; }
 .source-MH             { background: #ecfccb; color: #3f6212; }
 .source-RAPPORT        { background: #f1f5f9; color: #334155; }
+
+/* ===== View toggle ===== */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-left: 0.5rem;
+}
+.view-toggle button {
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.view-toggle button.active {
+  background: #3730a3;
+  color: white;
+}
+.view-toggle button:hover:not(.active) { background: #f3f4f6; }
+
+/* ===== Tabell-container ===== */
+.table-view {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+/* ===== Mobil ===== */
+@media (max-width: 640px) {
+  .view-toggle { display: none !important; }
+  .column-picker-wrap { display: none !important; }
+  .table-view { display: none !important; }
+}
