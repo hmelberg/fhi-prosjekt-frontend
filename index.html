@@ -68,6 +68,7 @@
       <div class="view-toggle" id="view-toggle" role="group" aria-label="Visningsmodus">
         <button type="button" data-mode="cards" class="active">Kort</button>
         <button type="button" data-mode="table">Tabell</button>
+        <button type="button" data-mode="analyse">Analyse</button>
       </div>
       <div class="column-picker-wrap" id="column-picker-wrap" hidden>
         <button type="button" id="column-picker-btn" aria-haspopup="listbox" aria-expanded="false">
@@ -75,10 +76,17 @@
         </button>
         <div class="column-picker-panel" id="column-picker-panel" hidden></div>
       </div>
+      <div class="preset-menu-wrap" id="preset-menu-wrap" hidden>
+        <button type="button" id="preset-menu-btn" aria-haspopup="menu" aria-expanded="false">
+          Ferdiglagde ▾
+        </button>
+        <div class="preset-menu-panel" id="preset-menu-panel" hidden></div>
+      </div>
       <span id="result-count" class="muted"></span>
     </div>
     <div id="cards" class="card-grid"></div>
     <div id="table-view" class="table-view" hidden></div>
+    <div id="analyse-view" class="analyse-view" hidden></div>
     <div id="pagination" class="pagination"></div>
   </section>
 </main>
@@ -97,8 +105,10 @@
   <p>Data hentet fra <a href="https://www.fhi.no/oversikter/prosjekter/" target="_blank" rel="noopener">fhi.no</a> — dette er ikke en offisiell FHI-tjeneste.</p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="app.js"></script>
 <script src="browse.js"></script>
 <script src="tabell.js"></script>
+<script src="analyse.js"></script>
 </body>
 </html>
