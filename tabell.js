@@ -49,7 +49,7 @@ function onResize() {
 function loadStateFromStorage() {
   try {
     const vm = localStorage.getItem(LS_VIEW_MODE);
-    if (vm === 'cards' || vm === 'table') TABLE_STATE.viewMode = vm;
+    if (vm === 'cards' || vm === 'table' || vm === 'analyse') TABLE_STATE.viewMode = vm;
 
     const cols = localStorage.getItem(LS_TABLE_COLUMNS);
     if (cols) TABLE_STATE.enabledCols = JSON.parse(cols);
@@ -100,8 +100,12 @@ function applyViewMode() {
   const mode = TABLE_STATE.viewMode;
   document.getElementById('cards').hidden = mode !== 'cards';
   document.getElementById('table-view').hidden = mode !== 'table';
+  const analyseEl = document.getElementById('analyse-view');
+  if (analyseEl) analyseEl.hidden = mode !== 'analyse';
   document.getElementById('pagination').hidden = mode !== 'cards';
   document.getElementById('column-picker-wrap').hidden = mode !== 'table';
+  const presetWrap = document.getElementById('preset-menu-wrap');
+  if (presetWrap) presetWrap.hidden = mode !== 'analyse';
   // Cards-sortering-dropdown er bare meningsfull i cards-modus
   document.getElementById('sort').disabled = mode !== 'cards';
 

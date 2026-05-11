@@ -157,10 +157,11 @@ async function loadProjects() {
   if (STATE.filters.q) params.set('q', STATE.filters.q);
   params.set('sort', STATE.sort);
   params.set('page', STATE.page);
-  // Tabell-modus laster alle filtrerte; cards beholder paginering.
+  // Tabell- og analyse-modus laster alle filtrerte; cards beholder paginering.
   // window.TABLE_STATE settes av tabell.js ved init.
-  const inTableMode = window.TABLE_STATE && TABLE_STATE.viewMode === 'table';
-  params.set('page_size', inTableMode ? 0 : STATE.pageSize);
+  const fullSetMode = window.TABLE_STATE
+    && (TABLE_STATE.viewMode === 'table' || TABLE_STATE.viewMode === 'analyse');
+  params.set('page_size', fullSetMode ? 0 : STATE.pageSize);
 
   const cards = $('cards');
   cards.innerHTML = '<p class="muted">Laster…</p>';
