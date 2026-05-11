@@ -167,9 +167,15 @@ const DEFAULT_COLUMNS = ['title', 'area', 'status', 'source', 'tags', 'period', 
 
 function getActiveColumns() {
   const enabled = TABLE_STATE.enabledCols || DEFAULT_COLUMNS;
+  const all = allColumnsForCurrentData();
   return enabled
-    .map(id => COLUMNS.find(c => c.id === id))
+    .map(id => all.find(c => c.id === id))
     .filter(Boolean);
+}
+
+function allColumnsForCurrentData() {
+  const extras = discoverExtraFieldColumns(TABLE_STATE.rows);
+  return COLUMNS.concat(extras);
 }
 
 // === Render ===
@@ -319,7 +325,7 @@ function renderCellValue(val, col, row) {
 
 // === Sortering ===
 function sortRows(rows, cols) {
-  const sortCol = COLUMNS.find(c => c.id === TABLE_STATE.sort.col);
+  const sortCol = allColumnsForCurrentData().find(c => c.id === TABLE_STATE.sort.col);
   if (!sortCol) return rows.slice();
   const keyFn = sortCol.sortKey || (r => sortCol.get(r));
   const dir = TABLE_STATE.sort.dir === 'asc' ? 1 : -1;
@@ -372,6 +378,67 @@ function stripHtml(s) {
   return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+// === Dynamiske extra_fields-kolonner ===
+function discoverExtraFieldColumns(rows) {
+  // Returnerer kolonne-definisjoner for hver unik extra_fields-nøkkel,
+  // gruppert etter hvilken kilde den primært tilhører.
+  const byKeyAndSource = new Map();   // key -> Set<source>
+  for (const r of rows) {
+    const ef = r.extra_fields || {};
+    const src = r.source || 'ukjent';
+    for (const key of Object.keys(ef)) {
+      if (!byKeyAndSource.has(key)) byKeyAndSource.set(key, new Set());
+      byKeyAndSource.get(key).add(src);
+    }
+  }
+
+  const cols = [];
+  for (const [key, sources] of byKeyAndSource.entries()) {
+    // Mest hyppige kilde for denne nøkkelen blir gruppen
+    const group = pickGroup(sources, rows, key);
+    cols.push({
+      id: `ef:${key}`,
+      label: key,
+      group,
+      width: 200,
+      get: (r) => {
+        const ef = (r.extra_fields || {})[key];
+        if (!ef) return '';
+        const v = (typeof ef === 'object' && 'value' in ef) ? ef.value : ef;
+        return v == null ? '' : String(v);
+      },
+      sortKey: (r) => {
+        const ef = (r.extra_fields || {})[key];
+        if (!ef) return '';
+        const v = (typeof ef === 'object' && 'value' in ef) ? ef.value : ef;
+        // Tallverdier sorteres som tall hvis mulig
+        const n = Number(v);
+        return Number.isFinite(n) ? n : String(v ?? '').toLowerCase();
+      },
+    });
+  }
+  return cols;
+}
+
+function pickGroup(sourceSet, rows, key) {
+  // Tell hvor mange rader per kilde har denne nøkkelen
+  const counts = {};
+  for (const r of rows) {
+    if (r.extra_fields && key in r.extra_fields) {
+      const s = r.source || 'ukjent';
+      counts[s] = (counts[s] || 0) + 1;
+    }
+  }
+  let best = null, bestN = -1;
+  for (const [s, n] of Object.entries(counts)) {
+    if (n > bestN) { best = s; bestN = n; }
+  }
+  if (best === 'NVA') return 'NVA';
+  if (best === 'eProtokoll') return 'eProtokoll';
+  if (best && ['FF', 'SM', 'KRG', 'HT', 'HD', 'MH'].includes(best)) return 'fhi.no';
+  return 'avledede';
+}
+
 // === Kolonneplukker ===
 function wireColumnPicker() {
   const btn = document.getElementById('column-picker-btn');
@@ -406,7 +473,7 @@ function renderColumnPicker() {
 
   // Grupper kolonner
   const groups = {};
-  for (const col of COLUMNS) {
+  for (const col of allColumnsForCurrentData()) {
     (groups[col.group] = groups[col.group] || []).push(col);
   }
   const groupOrder = ['standard', 'eProtokoll', 'NVA', 'fhi.no', 'avledede'];
@@ -454,7 +521,7 @@ function toggleColumn(colId, on) {
   if (on) {
     if (!current.includes(colId)) {
       // Plasser i samme rekkefølge som COLUMNS-array
-      const order = COLUMNS.map(c => c.id);
+      const order = allColumnsForCurrentData().map(c => c.id);
       next = current.concat(colId).sort((a, b) => order.indexOf(a) - order.indexOf(b));
     } else {
       next = current.slice();
