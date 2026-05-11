@@ -257,7 +257,7 @@ function wireTableClicks(table) {
       const tr = td.closest('tr');
       const slug = tr && tr.dataset.slug;
       const row = TABLE_STATE.rows.find(r => r.slug === slug);
-      const col = COLUMNS.find(c => c.id === colId);
+      const col = allColumnsForCurrentData().find(c => c.id === colId);
       if (row && col) openCellDialog(col, row);
     }
   });
@@ -411,9 +411,10 @@ function discoverExtraFieldColumns(rows) {
         const ef = (r.extra_fields || {})[key];
         if (!ef) return '';
         const v = (typeof ef === 'object' && 'value' in ef) ? ef.value : ef;
+        if (v == null || v === '') return '';
         // Tallverdier sorteres som tall hvis mulig
         const n = Number(v);
-        return Number.isFinite(n) ? n : String(v ?? '').toLowerCase();
+        return Number.isFinite(n) ? n : String(v).toLowerCase();
       },
     });
   }
