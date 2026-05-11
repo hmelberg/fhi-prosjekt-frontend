@@ -330,17 +330,222 @@ function applyPreset(presetId) {
   renderChart();
 }
 
-// === Chart placeholder (fylles inn i Task 5) ===
+// === Aggregering ===
+function aggregate(rows, state) {
+  const dim = DIMS[state.dim1];
+  const dim2 = state.dim2 ? DIMS[state.dim2] : null;
+  if (!dim) return { result: {}, imputedMean: null, totalProjects: rows.length, valueCount: 0 };
+
+  const buckets = new Map();   // dim1Key -> dim2Key -> [projects]
+
+  for (const r of rows) {
+    const d1Vals = toArray(dim.get(r));
+    const d2Vals = dim2 ? toArray(dim2.get(r)) : ['__total__'];
+
+    for (const v1 of d1Vals) {
+      for (const v2 of d2Vals) {
+        const k1 = (v1 == null || v1 === '') ? '(tom)' : String(v1);
+        const k2 = (v2 == null || v2 === '') ? '(tom)' : String(v2);
+        if (!buckets.has(k1)) buckets.set(k1, new Map());
+        const inner = buckets.get(k1);
+        if (!inner.has(k2)) inner.set(k2, []);
+        inner.get(k2).push(r);
+      }
+    }
+  }
+
+  // Beregn imputert gjennomsnitt hvis aktuelt
+  let imputedMean = null;
+  let valueCount = 0;
+  if (state.metric === 'sum' && state.valueCol) {
+    const vc = VALUE_COLS[state.valueCol];
+    if (vc) {
+      const values = rows.map(vc.get).filter(v => v != null && Number.isFinite(v));
+      valueCount = values.length;
+      if (state.imputeMissing && values.length > 0) {
+        imputedMean = values.reduce((a, b) => a + b, 0) / values.length;
+      }
+    }
+  }
+
+  const result = {};
+  for (const [k1, inner] of buckets) {
+    result[k1] = {};
+    for (const [k2, projs] of inner) {
+      if (state.metric === 'count') {
+        result[k1][k2] = projs.length;
+      } else {
+        const vc = VALUE_COLS[state.valueCol];
+        if (!vc) { result[k1][k2] = 0; continue; }
+        let sum = 0;
+        for (const r of projs) {
+          const v = vc.get(r);
+          if (v != null && Number.isFinite(v)) sum += v;
+          else if (imputedMean != null) sum += imputedMean;
+        }
+        result[k1][k2] = sum;
+      }
+    }
+  }
+
+  return { result, imputedMean, totalProjects: rows.length, valueCount };
+}
+
+function sortGroupKeys(keys, dimId) {
+  const dim = DIMS[dimId];
+  if (!dim) return keys;
+  // Numeriske år: stigende
+  if (dimId === 'year_changed' || dimId === 'year_started') {
+    return [...keys].sort((a, b) => String(a).localeCompare(String(b), 'nb'));
+  }
+  // Andre: alfabetisk
+  return [...keys].sort((a, b) => String(a).localeCompare(String(b), 'nb'));
+}
+
+function chartTypeMap(t) {
+  if (t === 'line') return 'line';
+  if (t === 'pie') return 'pie';
+  // bar, hbar, stacked, grouped
+  return 'bar';
+}
+
+// === Chart-rendering ===
 function renderChart() {
   const canvas = document.getElementById('analyse-chart-canvas');
   const info = document.getElementById('analyse-agg-info');
-  if (info) info.textContent = 'Chart-rendering kommer (Task 5)…';
+  if (!canvas) return;
+
+  // Destroy gammelt chart hvis det finnes
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  if (!ANALYSE_STATE.rows.length) {
+    renderEmptyState('Ingen prosjekter matcher filtrene.');
+    if (info) info.textContent = '';
+    return;
+  }
+
+  const agg = aggregate(ANALYSE_STATE.rows, ANALYSE_STATE);
+
+  if (!Object.keys(agg.result).length) {
+    renderEmptyState('Ingen grupper å vise med dette utvalget.');
+    renderAggInfo(agg);
+    return;
+  }
+
+  // Sortering av dim1-nøkler (med top-N for tag)
+  let labels = sortGroupKeys(Object.keys(agg.result), ANALYSE_STATE.dim1);
+  if (DIMS[ANALYSE_STATE.dim1].topN && labels.length > DIMS[ANALYSE_STATE.dim1].topN) {
+    // Sort by total value descending and take top N
+    labels.sort((a, b) => {
+      const sumA = Object.values(agg.result[a]).reduce((x, y) => x + y, 0);
+      const sumB = Object.values(agg.result[b]).reduce((x, y) => x + y, 0);
+      return sumB - sumA;
+    });
+    labels = labels.slice(0, DIMS[ANALYSE_STATE.dim1].topN);
+  }
+
+  const config = buildChartConfig(agg.result, labels, ANALYSE_STATE);
+
+  const ctx = canvas.getContext('2d');
+  chartInstance = new Chart(ctx, config);
+
+  renderAggInfo(agg);
+}
+
+function buildChartConfig(result, labels, state) {
+  const baseType = chartTypeMap(state.chartType);
+
+  // 1D
+  if (!state.dim2) {
+    const data1D = labels.map(k => result[k]['__total__'] || 0);
+    return {
+      type: baseType,
+      data: {
+        labels,
+        datasets: [{
+          label: state.metric === 'count'
+            ? 'Antall'
+            : (VALUE_COLS[state.valueCol] ? VALUE_COLS[state.valueCol].label : 'Sum'),
+          data: data1D,
+          backgroundColor: state.chartType === 'pie' ? CHART_COLORS : CHART_COLORS[0],
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: state.chartType === 'hbar' ? 'y' : 'x',
+        plugins: {
+          legend: { display: state.chartType === 'pie', position: 'bottom' },
+          tooltip: { enabled: true },
+        },
+      },
+    };
+  }
+
+  // 2D
+  const allD2 = new Set();
+  for (const k1 of labels) {
+    for (const k2 of Object.keys(result[k1])) allD2.add(k2);
+  }
+  const d2Labels = [...allD2].sort((a, b) => String(a).localeCompare(String(b), 'nb'));
+
+  const datasets = d2Labels.map((d2k, i) => ({
+    label: d2k,
+    data: labels.map(k1 => result[k1][d2k] || 0),
+    backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+    borderColor: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  const stacked = state.chartType === 'stacked';
+  return {
+    type: baseType,
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: state.chartType === 'hbar' ? 'y' : 'x',
+      scales: stacked ? { x: { stacked: true }, y: { stacked: true } } : undefined,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { enabled: true },
+      },
+    },
+  };
+}
+
+function renderEmptyState(msg) {
+  const info = document.getElementById('analyse-agg-info');
+  if (info) info.textContent = msg;
+  const canvas = document.getElementById('analyse-chart-canvas');
   if (canvas) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
 
+function renderAggInfo(agg) {
+  const info = document.getElementById('analyse-agg-info');
+  if (!info) return;
+  const lines = [`${agg.totalProjects} prosjekter`];
+  if (ANALYSE_STATE.metric === 'sum' && ANALYSE_STATE.valueCol) {
+    const vc = VALUE_COLS[ANALYSE_STATE.valueCol];
+    lines.push(`${agg.valueCount} har ${vc ? vc.label : ANALYSE_STATE.valueCol}-verdi`);
+    if (agg.imputedMean != null) {
+      lines.push(`Imputert gjennomsnitt: ${agg.imputedMean.toFixed(1)}`);
+    }
+  }
+  if (DIMS[ANALYSE_STATE.dim1] && DIMS[ANALYSE_STATE.dim1].multiValue) {
+    lines.push(`Totaler overstiger ${agg.totalProjects} (et prosjekt kan ha flere ${DIMS[ANALYSE_STATE.dim1].label.toLowerCase()})`);
+  }
+  info.textContent = lines.join('\n');
+}
+
+// === PNG-eksport ===
 function downloadPng() {
-  console.log('downloadPng: kommer i Task 5');
+  const canvas = document.getElementById('analyse-chart-canvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `fhi-${ANALYSE_STATE.dim1}-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
