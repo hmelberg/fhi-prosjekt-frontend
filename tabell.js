@@ -291,8 +291,8 @@ function openCellDialog(col, row) {
 }
 
 function renderCellValue(val, col, row) {
-  // Lenke-felt
-  if (col.id === 'url' || (typeof val === 'string' && /^https?:\/\//.test(val))) {
+  // Lenke-felt (kun http/https — blokker javascript:-URL-er)
+  if (typeof val === 'string' && /^https?:\/\//.test(val)) {
     return el('p', {}, el('a', { href: val, target: '_blank', rel: 'noopener' }, val));
   }
   // Liste (stikkord, partnere, sources)
