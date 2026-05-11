@@ -101,10 +101,178 @@ function applyViewMode() {
   }
 }
 
-// === Render (placeholder — implementeres i Task 6) ===
+// === Kolonnedefinisjoner ===
+const COLUMNS = [
+  { id: 'title', label: 'Tittel', group: 'standard', width: 280,
+    get: r => r.title || '',
+    format: (v, r) => el('span', { class: 'cell-title-link', 'data-slug': r.slug }, v || '(uten tittel)'),
+    sortKey: r => (r.title || '').toLowerCase() },
+  { id: 'area', label: 'Område', group: 'standard', width: 80,
+    get: r => r.area || '',
+    format: v => areaBadge(v),
+    sortKey: r => r.area || '' },
+  { id: 'status', label: 'Status', group: 'standard', width: 100,
+    get: r => r.status || '',
+    format: v => statusBadge(v),
+    sortKey: r => r.status || '' },
+  { id: 'source', label: 'Kilde', group: 'standard', width: 160,
+    get: r => (r.sources && r.sources.length ? r.sources : (r.source ? [r.source] : [])),
+    format: srcs => sourcesCell(srcs),
+    sortKey: r => (r.sources && r.sources[0]) || r.source || '' },
+  { id: 'tags', label: 'Stikkord', group: 'standard', width: 220,
+    get: r => r.tags || [],
+    format: tags => formatTagsCell(tags),
+    sortKey: r => (r.tags || []).join(',') },
+  { id: 'period', label: 'Periode', group: 'standard', width: 140,
+    get: r => formatPeriod(r),
+    sortKey: r => r.project_start || '' },
+  { id: 'responsible', label: 'Prosjektleder', group: 'standard', width: 180,
+    get: r => r.responsible || '',
+    sortKey: r => (r.responsible || '').toLowerCase() },
+  // Ekstra standard-kolonner (tilgjengelige i kolonneplukker)
+  { id: 'main_group', label: 'Hovedgruppe', group: 'standard', width: 180,
+    get: r => r.main_group || '',
+    sortKey: r => r.main_group || '' },
+  { id: 'funding', label: 'Finansiering', group: 'standard', width: 200,
+    get: r => r.funding || '',
+    sortKey: r => (r.funding || '').toLowerCase() },
+  { id: 'date_changed', label: 'Sist endret', group: 'standard', width: 120,
+    get: r => formatDateShort(r.date_changed),
+    sortKey: r => r.date_changed || '' },
+  { id: 'description', label: 'Beskrivelse', group: 'standard', width: 320,
+    get: r => stripHtml(r.description || ''),
+    sortKey: r => (r.description || '').toLowerCase() },
+  // Avledede
+  { id: 'n_tags', label: '# stikkord', group: 'avledede', width: 80, align: 'right',
+    get: r => (r.tags || []).length,
+    sortKey: r => (r.tags || []).length },
+  { id: 'n_sources', label: '# kilder', group: 'avledede', width: 80, align: 'right',
+    get: r => (r.sources || []).length,
+    sortKey: r => (r.sources || []).length },
+  { id: 'year_changed', label: 'År endret', group: 'avledede', width: 80, align: 'right',
+    get: r => (r.date_changed || '').slice(0, 4),
+    sortKey: r => (r.date_changed || '').slice(0, 4) },
+];
+
+const DEFAULT_COLUMNS = ['title', 'area', 'status', 'source', 'tags', 'period', 'responsible'];
+
+function getActiveColumns() {
+  const enabled = TABLE_STATE.enabledCols || DEFAULT_COLUMNS;
+  return enabled
+    .map(id => COLUMNS.find(c => c.id === id))
+    .filter(Boolean);
+}
+
+// === Render ===
 function renderTable() {
   const root = document.getElementById('table-view');
-  root.innerHTML = '<p class="muted">Tabell kommer (Task 6)…</p>';
+  root.innerHTML = '';
+  if (!TABLE_STATE.rows.length) {
+    root.appendChild(el('p', { class: 'muted', style: 'padding:1rem' },
+      'Ingen prosjekter matcher filtrene.'));
+    return;
+  }
+
+  const cols = getActiveColumns();
+  const sortedRows = sortRows(TABLE_STATE.rows, cols);
+
+  const table = el('table', { class: 'data-table' });
+  table.appendChild(renderHeader(cols));
+  const tbody = el('tbody', {});
+  for (const row of sortedRows) tbody.appendChild(renderRow(row, cols));
+  table.appendChild(tbody);
+  root.appendChild(table);
+}
+
+function renderHeader(cols) {
+  const thead = el('thead', {});
+  const tr = el('tr', {});
+  for (const col of cols) {
+    const isSorted = TABLE_STATE.sort.col === col.id;
+    const arrow = !isSorted ? '↕' : (TABLE_STATE.sort.dir === 'asc' ? '↑' : '↓');
+    const th = el('th', {
+      class: isSorted ? 'sorted' : '',
+      style: `width:${col.width}px;text-align:${col.align || 'left'}`,
+      title: 'Klikk for å sortere',
+      onclick: () => onHeaderClick(col.id),
+    }, col.label, ' ', el('span', { class: 'sort-arrow' }, arrow));
+    tr.appendChild(th);
+  }
+  thead.appendChild(tr);
+  return thead;
+}
+
+function renderRow(row, cols) {
+  const tr = el('tr', { 'data-slug': row.slug });
+  for (const col of cols) {
+    const val = col.get(row);
+    const cellContent = col.format ? col.format(val, row) : (val == null ? '' : String(val));
+    const td = el('td', {
+      class: 'cell',
+      'data-col-id': col.id,
+      style: `text-align:${col.align || 'left'}`,
+    });
+    if (cellContent instanceof Node) td.appendChild(cellContent);
+    else if (cellContent && typeof cellContent === 'object' && cellContent.nodeType === undefined) td.append(cellContent);
+    else td.appendChild(document.createTextNode(String(cellContent ?? '')));
+    tr.appendChild(td);
+  }
+  return tr;
+}
+
+// === Sortering ===
+function sortRows(rows, cols) {
+  const sortCol = COLUMNS.find(c => c.id === TABLE_STATE.sort.col);
+  if (!sortCol) return rows.slice();
+  const keyFn = sortCol.sortKey || (r => sortCol.get(r));
+  const dir = TABLE_STATE.sort.dir === 'asc' ? 1 : -1;
+  return rows.slice().sort((a, b) => {
+    const ka = keyFn(a), kb = keyFn(b);
+    if (ka == null && kb == null) return 0;
+    if (ka == null) return 1 * dir;
+    if (kb == null) return -1 * dir;
+    if (typeof ka === 'number' && typeof kb === 'number') return (ka - kb) * dir;
+    return String(ka).localeCompare(String(kb), 'nb') * dir;
+  });
+}
+
+function onHeaderClick(colId) {
+  if (TABLE_STATE.sort.col === colId) {
+    TABLE_STATE.sort.dir = TABLE_STATE.sort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    TABLE_STATE.sort = { col: colId, dir: 'asc' };
+  }
+  saveSort(TABLE_STATE.sort);
+  renderTable();
+}
+
+// === Formattere ===
+function formatPeriod(r) {
+  const start = r.project_start ? r.project_start.slice(0, 4) : '';
+  const end = r.project_end ? r.project_end.slice(0, 4) : '';
+  if (!start && !end) return '';
+  if (start && !end) return `${start} –`;
+  if (!start && end) return `– ${end}`;
+  return `${start} – ${end}`;
+}
+
+function formatDateShort(d) {
+  if (!d) return '';
+  return d.slice(0, 10);
+}
+
+function formatTagsCell(tags) {
+  if (!tags || !tags.length) return document.createTextNode('');
+  const frag = document.createDocumentFragment();
+  const show = tags.slice(0, 3);
+  for (const t of show) frag.appendChild(el('span', { class: 'tag-chip' }, t));
+  if (tags.length > 3) frag.appendChild(el('span', { class: 'tag-chip' }, `+${tags.length - 3}`));
+  return frag;
+}
+
+function stripHtml(s) {
+  if (!s) return '';
+  return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
 // === Helpers ===
