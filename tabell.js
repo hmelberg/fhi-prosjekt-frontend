@@ -180,6 +180,19 @@ function allColumnsForCurrentData() {
 
 // === Render ===
 function renderTable() {
+  try {
+    _renderTableInner();
+  } catch (e) {
+    console.error('Feil i tabell-rendring, faller tilbake til kort:', e);
+    const root = document.getElementById('table-view');
+    root.innerHTML = '';
+    root.appendChild(el('p', { class: 'muted', style: 'padding:1rem;color:#991b1b' },
+      'Tabell-rendringen feilet. Bytter til kort-visning. Detaljer i konsollen.'));
+    setViewMode('cards', { persist: false });
+  }
+}
+
+function _renderTableInner() {
   const root = document.getElementById('table-view');
   root.innerHTML = '';
   if (!TABLE_STATE.rows.length) {
@@ -198,7 +211,6 @@ function renderTable() {
   table.appendChild(tbody);
   root.appendChild(table);
   wireTableClicks(table);
-  // requestAnimationFrame for å sikre at layout har kjørt før vi måler
   requestAnimationFrame(markTruncated);
 }
 
