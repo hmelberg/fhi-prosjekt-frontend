@@ -1,7 +1,11 @@
 // Browse-side: filterbar liste over prosjekter med paginering, sortering og søk.
 
+// Default-kilder ved sidelast: kun innsendte prosjekter (FF/SM/KRG/HT/HD/MH)
+// — ikke NVA og eProtokoll som dominerer datasettet ellers.
+const DEFAULT_SOURCES = ['Innsendt'];
+
 const STATE = {
-  filters: { area: '', main_group: '', tags: new Set(), sources: new Set(), status: '', q: '' },
+  filters: { area: '', main_group: '', tags: new Set(), sources: new Set(DEFAULT_SOURCES), status: '', q: '' },
   sort: 'date_changed',
   page: 0,
   pageSize: 25,
@@ -33,13 +37,17 @@ function setupEventListeners() {
   });
 
   $('reset-filters').addEventListener('click', () => {
-    STATE.filters = { area: '', main_group: '', tags: new Set(), sources: new Set(), status: '', q: '' };
+    STATE.filters = { area: '', main_group: '', tags: new Set(), sources: new Set(DEFAULT_SOURCES), status: '', q: '' };
     STATE.sort = 'date_changed';
     STATE.page = 0;
     $('text-search').value = '';
     $('sort').value = 'date_changed';
     document.querySelectorAll('input[type=radio][value=""]').forEach(r => r.checked = true);
     document.querySelectorAll('#area-filter input, #source-filter input, #tag-filter input').forEach(c => c.checked = false);
+    // Default-kilde-checkboxer hukes på igjen
+    document.querySelectorAll('#source-filter input').forEach(c => {
+      c.checked = DEFAULT_SOURCES.includes(c.value);
+    });
     loadProjects();
   });
 
@@ -74,8 +82,9 @@ function renderSourceFilter(cats) {
   if (!root) return;
   root.innerHTML = '';
   for (const s of cats) {
+    const isDefault = STATE.filters.sources.has(s.code);
     const lbl = el('label', {},
-      el('input', { type: 'checkbox', value: s.code }),
+      el('input', { type: 'checkbox', value: s.code, checked: isDefault ? '' : false }),
       ` ${s.name}`,
       el('span', { class: 'filter-count' }, ` (${s.count})`),
     );
