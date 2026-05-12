@@ -46,13 +46,32 @@ function onResize() {
 }
 
 // === LocalStorage ===
+// Gamle default-sett vi migrerer brukere bort fra
+const OLD_DEFAULT_SETS = [
+  ['title', 'area', 'status', 'source', 'tags', 'period', 'responsible'], // pre-2026-05-12
+];
+
 function loadStateFromStorage() {
   try {
     const vm = localStorage.getItem(LS_VIEW_MODE);
     if (vm === 'cards' || vm === 'table' || vm === 'analyse') TABLE_STATE.viewMode = vm;
 
     const cols = localStorage.getItem(LS_TABLE_COLUMNS);
-    if (cols) TABLE_STATE.enabledCols = JSON.parse(cols);
+    if (cols) {
+      const parsed = JSON.parse(cols);
+      if (Array.isArray(parsed)) {
+        const sig = JSON.stringify(parsed);
+        const isOldDefault = OLD_DEFAULT_SETS.some(s => JSON.stringify(s) === sig);
+        if (isOldDefault) {
+          // Migrer: bruker hadde det gamle default-settet (med status osv.),
+          // bytt til det nye default-settet
+          TABLE_STATE.enabledCols = null;
+          localStorage.removeItem(LS_TABLE_COLUMNS);
+        } else {
+          TABLE_STATE.enabledCols = parsed;
+        }
+      }
+    }
 
     const sort = localStorage.getItem(LS_TABLE_SORT);
     if (sort) {
@@ -215,25 +234,31 @@ function _renderTableInner() {
   const cols = getActiveColumns();
   const sortedRows = sortRows(TABLE_STATE.rows, cols);
 
+  // Beregn proporsjonale bredder fra col.width-hintene så tabellen alltid
+  // fyller tilgjengelig bredde og skalerer ned/opp med viewport.
+  const totalWidth = cols.reduce((s, c) => s + (c.width || 100), 0) || 1;
+  const pctWidths = cols.map(c => ((c.width || 100) / totalWidth * 100).toFixed(2));
+
   const table = el('table', { class: 'data-table' });
-  table.appendChild(renderHeader(cols));
+  table.appendChild(renderHeader(cols, pctWidths));
   const tbody = el('tbody', {});
-  for (const row of sortedRows) tbody.appendChild(renderRow(row, cols));
+  for (const row of sortedRows) tbody.appendChild(renderRow(row, cols, pctWidths));
   table.appendChild(tbody);
   root.appendChild(table);
   wireTableClicks(table);
   requestAnimationFrame(markTruncated);
 }
 
-function renderHeader(cols) {
+function renderHeader(cols, pctWidths) {
   const thead = el('thead', {});
   const tr = el('tr', {});
-  for (const col of cols) {
+  for (let i = 0; i < cols.length; i++) {
+    const col = cols[i];
     const isSorted = TABLE_STATE.sort.col === col.id;
     const arrow = !isSorted ? '↕' : (TABLE_STATE.sort.dir === 'asc' ? '↑' : '↓');
     const th = el('th', {
       class: isSorted ? 'sorted' : '',
-      style: `width:${col.width}px;text-align:${col.align || 'left'}`,
+      style: `width:${pctWidths[i]}%;text-align:${col.align || 'left'}`,
       title: 'Klikk for å sortere',
       onclick: () => onHeaderClick(col.id),
     }, col.label, ' ', el('span', { class: 'sort-arrow' }, arrow));
@@ -243,15 +268,16 @@ function renderHeader(cols) {
   return thead;
 }
 
-function renderRow(row, cols) {
+function renderRow(row, cols, pctWidths) {
   const tr = el('tr', { 'data-slug': row.slug });
-  for (const col of cols) {
+  for (let i = 0; i < cols.length; i++) {
+    const col = cols[i];
     const val = col.get(row);
     const cellContent = col.format ? col.format(val, row) : (val == null ? '' : String(val));
     const td = el('td', {
       class: 'cell',
       'data-col-id': col.id,
-      style: `text-align:${col.align || 'left'}`,
+      style: `width:${pctWidths[i]}%;text-align:${col.align || 'left'}`,
     });
     if (cellContent instanceof Node) td.appendChild(cellContent);
     else if (cellContent && typeof cellContent === 'object' && cellContent.nodeType === undefined) td.append(cellContent);
